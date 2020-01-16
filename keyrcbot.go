@@ -75,7 +75,11 @@ func setupKeybaseLinks() {
 		}
 	}
 }
+
 func addIrcTrigger(name string) {
+	if name == "general" {
+		return
+	}
 	name = strings.Replace(name, "#", "", -1)
 	log.LogWarn(fmt.Sprintf("Setting up trigger for #%s", name))
 	var botLessTrigger = hbot.Trigger{
@@ -139,8 +143,9 @@ func handleMessage(api keybase.ChatAPI) {
 }
 
 func sendChat(message string, chann string) {
-	channel.TopicName = chann
-	chat := k.NewChat(channel)
+	newChannel := channel
+	newChannel.TopicName = chann
+	chat := k.NewChat(newChannel)
 	_, err := chat.Send(strings.Replace(message, botNick, "@here", -1))
 	if err != nil {
 		log.LogError(fmt.Sprintf("There was an error %+v", err))
