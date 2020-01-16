@@ -38,7 +38,6 @@ func main() {
 	channel.MembersType = keybase.TEAM
 	channel.Name = "keyrc"        // The team you're linking to IRC
 	channel.TopicName = "general" // The control channel (will be ignored for all except commands)
-	sendChat("Link starting", "general")
 	go setupIRC()
 	k.Run(func(api keybase.ChatAPI) {
 		handleMessage(api)
@@ -108,10 +107,12 @@ func handleMessage(api keybase.ChatAPI) {
 		return
 	}
 	if api.Msg.Sender.Username == k.Username {
+		log.LogDebug("Ignoring message from me")
 		return
 	}
 
 	if api.Msg.Content.Type != "text" {
+		log.LogDebug("Non-text message ignored.")
 		return
 	}
 	msgSender := api.Msg.Sender.Username
@@ -120,19 +121,18 @@ func handleMessage(api keybase.ChatAPI) {
 
 	parts := strings.Split(msgBody, " ")
 	if parts[0] == "#" {
+		log.LogWarn("Comment detected and msg ignored")
 		return
 	}
-	if len(parts) == 3 {
+	if api.Msg.Channel.TopicName == channel.TopicName {
+		log.LogDebug(fmt.Sprintf("Message found in control channel %s == %s", api.Msg.Channel.TopicName, channel.TopicName))
 		if parts[0] == fmt.Sprintf("@%s", k.Username) {
-			if parts[1] == "join" {
-				if api.Msg.Channel.TopicName == channel.TopicName && parts[2] != channel.TopicName {
-					addIrcTrigger(parts[2])
-					return
-				}
+			log.LogDebug("I was tagged in a message in Control Channel")
+			if len(parts) == 3 && parts[1] == "join" {
+				log.LogDebug("Join command detected")
+				addIrcTrigger(parts[2])
 			}
 		}
-	}
-	if api.Msg.Channel.TopicName == channel.TopicName {
 		return
 	}
 	irc.Msg(fmt.Sprintf("#%s", api.Msg.Channel.TopicName), fmt.Sprintf("[%s]: %s", msgSender, msgBody))
@@ -141,7 +141,7 @@ func handleMessage(api keybase.ChatAPI) {
 func sendChat(message string, chann string) {
 	channel.TopicName = chann
 	chat := k.NewChat(channel)
-	_, err := chat.Send(message)
+	_, err := chat.Send(strings.Replace(message, botNick, "@here", -1))
 	if err != nil {
 		log.LogError(fmt.Sprintf("There was an error %+v", err))
 	}
