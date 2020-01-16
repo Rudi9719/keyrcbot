@@ -12,21 +12,20 @@ import (
 )
 
 var (
-	dev      = false
-	k        = keybase.NewKeybase()
-	channel  keybase.Channel
-	irc      *hbot.Bot
-	linkName = "halium"
-	botNick  = "keyrcbot"
-	serv     = flag.String("server", "chat.freenode.net:6667", "hostname and port")
-	nick     = flag.String("nick", botNick, "nickname for the bot")
-	logOpts  = loggy.LogOpts{
-		OutFile:   "irc.log",
-		KBTeam:    "nightmarehaus.bots",
-		KBChann:   "general",
-		ProgName:  "irclink",
-		Level:     3,
-		UseStdout: true,
+	dev     = false
+	k       = keybase.NewKeybase()
+	channel keybase.Channel
+	irc     *hbot.Bot
+	botNick = "keyrcbot"                                                           // Set this for IRC Nickname
+	serv    = flag.String("server", "chat.freenode.net:6667", "hostname and port") // Set this for whatever server you're using
+	nick    = flag.String("nick", botNick, "nickname for the bot")
+	logOpts = loggy.LogOpts{
+		OutFile:   "irc.log",            // Set this for Logging output to file
+		KBTeam:    "nightmarehaus.bots", // Set this for Logging output to Keybase team
+		KBChann:   "general",            // Required for logging to Keybase Team, can be any channel
+		ProgName:  "irclink",            // Also required for logging to Keybase team
+		Level:     3,                    // 1 = Critical only, 2 = Errors, 3 = include Warnings, 4 = Debug, 5 = Info
+		UseStdout: true,                 // Set to true to also display to stdout
 	}
 	log = loggy.NewLogger(logOpts)
 )
@@ -37,8 +36,8 @@ func main() {
 		log.LogPanic("You are not logged in.")
 	}
 	channel.MembersType = keybase.TEAM
-	channel.Name = "keyrc"
-	channel.TopicName = "general"
+	channel.Name = "keyrc"        // The team you're linking to IRC
+	channel.TopicName = "general" // The control channel (will be ignored for all except commands)
 	sendChat("Link starting", "general")
 	go setupIRC()
 	k.Run(func(api keybase.ChatAPI) {
@@ -50,7 +49,7 @@ func setupIRC() {
 	var err error
 	saslOption := func(bot *hbot.Bot) {
 		bot.SASL = true
-		bot.Password = os.Getenv("IRC_PASS") // TODO: Set this
+		bot.Password = os.Getenv("IRC_PASS") // Set this to authenticate with IRC
 	}
 	hijackSession := func(bot *hbot.Bot) {
 		bot.HijackSession = true
@@ -72,7 +71,7 @@ func setupKeybaseLinks() {
 		log.LogError(fmt.Sprintf("Err was not nil from ChatList() in setupKeybaseLinks(), ```%+v```", err))
 	}
 	for _, s := range api.Result.Conversations {
-		if s.Channel.MembersType == keybase.TEAM && s.Channel.Name == channel.Name && s.Channel.TopicName != "general" {
+		if s.Channel.MembersType == keybase.TEAM && s.Channel.Name == channel.Name && s.Channel.TopicName != channel.TopicName {
 			addIrcTrigger(s.Channel.TopicName)
 		}
 	}
@@ -126,14 +125,14 @@ func handleMessage(api keybase.ChatAPI) {
 	if len(parts) == 3 {
 		if parts[0] == fmt.Sprintf("@%s", k.Username) {
 			if parts[1] == "join" {
-				if api.Msg.Channel.TopicName == "general" && parts[2] != "general" {
+				if api.Msg.Channel.TopicName == channel.TopicName && parts[2] != channel.TopicName {
 					addIrcTrigger(parts[2])
 					return
 				}
 			}
 		}
 	}
-	if api.Msg.Channel.TopicName == "general" {
+	if api.Msg.Channel.TopicName == channel.TopicName {
 		return
 	}
 	irc.Msg(fmt.Sprintf("#%s", api.Msg.Channel.TopicName), fmt.Sprintf("[%s]: %s", msgSender, msgBody))
