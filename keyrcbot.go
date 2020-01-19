@@ -24,14 +24,14 @@ var (
 		KBTeam:    "nightmarehaus.bots", // Set this for Logging output to Keybase team
 		KBChann:   "general",            // Required for logging to Keybase Team, can be any channel
 		ProgName:  "irclink",            // Also required for logging to Keybase team
-		Level:     3,                    // 1 = Critical only, 2 = Errors, 3 = include Warnings, 4 = Debug, 5 = Info
+		Level:     2,                    // 1 = Critical only, 2 = Errors, 3 = include Warnings, 4 = Debug, 5 = Info
 		UseStdout: true,                 // Set to true to also display to stdout
 	}
 	log = loggy.NewLogger(logOpts)
 )
 
 func main() {
-	log.LogWarn("Starting bot")
+	log.LogCritical("Starting bot")
 	if !k.LoggedIn {
 		log.LogPanic("You are not logged in.")
 	}
@@ -61,7 +61,7 @@ func setupIRC() {
 	setupKeybaseLinks()
 	log.LogWarn("Calling irc.Run()")
 	irc.Run()
-	log.LogError("irc.Run() returned")
+	log.LogPanic("irc.Run() returned")
 }
 func setupKeybaseLinks() {
 	log.LogWarn("Setting up keybase channel links")
@@ -100,7 +100,7 @@ func addIrcTrigger(name string) {
 	}
 	irc.Channels = append(irc.Channels, fmt.Sprintf("#%s", name))
 	irc.Join(fmt.Sprintf("#%s", name))
-	log.LogWarn(fmt.Sprintf("Adding trigger for #%s to bot", name))
+	log.LogCritical(fmt.Sprintf("Adding trigger for #%s to bot", name))
 	irc.AddTrigger(botLessTrigger)
 	log.LogDebug(fmt.Sprintf("irc.Channels = %+v", irc.Channels))
 	sendChat(fmt.Sprintf("# Connected to #%s!", name), name)
